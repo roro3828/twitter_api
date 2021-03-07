@@ -7,3 +7,4 @@ files=glob('./images/*')#imagesフォルダ内の画像をランダムに選択�
 select=files[randint(0,len(files))]
 
 update_banner(select)
+print(select)

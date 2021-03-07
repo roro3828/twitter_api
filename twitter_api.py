@@ -1,4 +1,5 @@
-from requests.models import Response
+import os
+from time import sleep
 from requests_oauthlib import OAuth1Session
 import json
 import twitter_key#キー読み込み
@@ -242,3 +243,54 @@ def update_user_profile(name=None,url=None,location=None,description=None):#ユ�
     if params!={}:
         response=oath().post(resource_url,params)
         return json.loads(response.text)
+
+def twitter_upload_status(media_id):
+    url='https://upload.twitter.com/1.1/media/upload.json'
+    get_status={'command':'STATUS','media_id':media_id}
+    response=oath().get(url,params=get_status).text
+    return json.loads(response)
+
+
+def upload_media_INIT(path):
+    file_size=os.path.getsize(path)#ファイルのサイズ取得 byte
+    media_type='video/mp4'
+
+    url='https://upload.twitter.com/1.1/media/upload.json'
+
+    params_init={'command':'INIT','total_bytes':file_size,'media_category': 'tweet_video'}
+
+    response_init=json.loads(oath().post(url,params_init).text)
+    media_id=response_init['media_id']
+
+    sent_byte=0
+    index=0
+    file=open(path,'rb')
+    while sent_byte<file_size:
+        media=file.read(4194304)#4MB読み込む
+
+        params_append={'command':'APPEND','media_id':media_id,'segment_index':index}
+
+        files={'media':media}
+
+        oath().post(url,data=params_append,files=files)
+
+        index=index+1
+        sent_byte=file.tell()
+        print(str(file_size)+'中'+str(sent_byte)+'アップロード完了')
+
+    print('完了')
+
+    params_finalize={'command':'FINALIZE','media_id':media_id}
+
+    response_finalize=oath().post(url,params_finalize)
+
+    response=json.loads(response_finalize.text)
+
+    status=twitter_upload_status(response['media_id'])
+
+    while status['processing_info']['state']=='in_progress':
+        print(str(status['processing_info']['progress_percent'])+'%処理済み')
+        sleep(5)
+        status=twitter_upload_status(response['media_id'])
+
+    return response
