@@ -79,22 +79,6 @@ def send_tweet(text,reply_id=None,media_id=None,place_id=None,attachment_url=Non
 
     return response_json
 
-def upload_media(path,return_id=True):#画像をアップロード
-    url='https://upload.twitter.com/1.1/media/upload.json'
-
-    media=image_file_to_base64(path)
-
-    params={'media_data':media}
-
-    response=oath().post(url,params)
-
-    response_json=json.loads(response.text)
-
-    if return_id:
-        return response_json['media_id']
-    else:
-        return response_json
-
 def create_favo(id,destroy=False):#いいねする
     if destroy:
         url='https://api.twitter.com/1.1/favorites/destroy.json'
@@ -231,13 +215,23 @@ def twitter_upload_status(media_id):
     return json.loads(response)
 
 
-def upload_media_INIT(path):
+def upload_media(path):
+    image_ext=['.jpg','.jpeg','.JPG','.JPEG','.jpe','.jfif','.pjpeg','.pjp','.png']#画像ファイルの拡張子
     file_size=os.path.getsize(path)#ファイルのサイズ取得 byte
+    _, ext = os.path.splitext(path)#ファイルの拡張子取得
+
+    if ext=='.mp4':
+        media_category='tweet_video'
+    elif ext in image_ext:
+        media_category='tweet_image'
+    elif ext=='.gif':
+        media_category='tweet_gif'
+
     media_type='video/mp4'
 
     url='https://upload.twitter.com/1.1/media/upload.json'
 
-    params_init={'command':'INIT','total_bytes':file_size,'media_category': 'tweet_video'}
+    params_init={'command':'INIT','total_bytes':file_size,'media_category':media_category}
 
     response_init=json.loads(oath().post(url,params_init).text)
     media_id=response_init['media_id']
@@ -266,11 +260,13 @@ def upload_media_INIT(path):
 
     response=json.loads(response_finalize.text)
 
-    status=twitter_upload_status(response['media_id'])
 
-    while status['processing_info']['state']=='in_progress':
-        print(str(status['processing_info']['progress_percent'])+'%処理済み')
-        sleep(5)
+
+    if media_category!='tweet_image':
         status=twitter_upload_status(response['media_id'])
+        while status['processing_info']['state']=='in_progress':
+            print(str(status['processing_info']['progress_percent'])+'%処理済み')
+            sleep(5)
+            status=twitter_upload_status(response['media_id'])
 
     return response
