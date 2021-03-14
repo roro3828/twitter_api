@@ -47,7 +47,7 @@ def split_list(li:list,n=4):#リストをn個ずつの要素に分ける
     return lists
 
 
-def send_tweet(text,reply_id=None,media_id=None,place_id=None):#ツイートする
+def send_tweet(text,reply_id=None,media_id=None,place_id=None,attachment_url=None):#ツイートする
     url='https://api.twitter.com/1.1/statuses/update.json'
     params={'status':text}
 
@@ -69,6 +69,9 @@ def send_tweet(text,reply_id=None,media_id=None,place_id=None):#ツイートす�
 
     if place_id!=None:
         params.setdefault('place_id',place_id)
+
+    if attachment_url!=None:
+        params.setdefault('attachment_url',attachment_url)
 
     response=oath().post(url,params)
 
@@ -170,29 +173,6 @@ def retweet(id,unretweet=False):
     response=oath().post(url)
 
     return json.loads(response.text)
-
-def quote_tweet(text,tweet_id,reply_id=None,media_id=None,place_id=None):
-    user_name=tweet_lookup(tweet_id)['includes']['users'][0]['username']
-    url='https://twitter.com/'+user_name+'/status/'+str(tweet_id)
-
-    response=send_tweet(text+' '+url,reply_id=reply_id,media_id=media_id,place_id=place_id)
-
-    return response
-
-def user_lookup(username=None,id=None):
-    url='https://api.twitter.com/2/users/by'
-    user_by=None
-    if username!=None:
-        user_by={'usernames':username}
-    elif id!=None:
-        user_by={'id':str(id)}
-
-    if user_by!=None:
-        params=user_by|{'user.fields':'created_at,id,name,username'}
-
-        response=oath().get(url,params=params)
-
-        return json.loads(response.text)
 
 def follow(id,destroy=False):
     if destroy:
